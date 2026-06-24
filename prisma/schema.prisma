@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  WORKER
+  ADMIN
+  SUPERADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+model User {
+  id                  String             @id @default(cuid())
+  name                String
+  email               String             @unique
+  image               String?
+  
+  // Profile settings
+  username            String?            @unique
+  displayName         String?
+  age                 Int?
+  gender              Gender?
+  bio                 String?
+  city                String?
+  avatarUrl           String?
+  usernameChangedAt   DateTime?
+  usernameChangeCount Int                @default(0)
+  onboardingComplete  Boolean            @default(false)
+  role                Role               @default(USER)
+  
+  // Existing gamification
+  level               String             @default("CITIZEN")
+  xp                  Int                @default(0)
+  trustScore          Float              @default(0)
+  
+  // Moderation
+  suspendedUntil      DateTime?
+  deletedAt           DateTime?
+  
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
+
+  issues              Issue[]            @relation("IssueAuthor")
+  assignedIssues      Issue[]            @relation("IssueAssignedTo")
+  votes               Vote[]
+  comments            Comment[]
+  adminLogs           AdminActivityLog[]
+  adminNotes          AdminNote[]
+  notifications       Notification[]
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  issues      Issue[]
+}
+
+model Issue {
+  id               String               @id @default(cuid())
+  title            String
+  description      String
+  type             String
+  status           String               @default("REPORTED")
+  severity         String
+  isEscalated      Boolean              @default(false)
+  latitude         Float
+  longitude        Float
+  accuracy         Float?
+  capturedAt       DateTime?
+  captureMethod    String?
+  address          String
+  mediaUrls        String[]
+  aiAnalysis       String?
+  confidenceScore  Float?
+  upvotes          Int                  @default(0)
+  verifications    Int                  @default(0)
+  priorityScore    Float                @default(0)
+  
+  departmentId     String?
+  department       Department?          @relation(fields: [departmentId], references: [id])
+  
+  assignedToId     String?
+  assignedTo       User?                @relation("IssueAssignedTo", fields: [assignedToId], references: [id])
+  assignedAt       DateTime?
+  assignedBy       String?
+  
+  resolvedAt       DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @default(now()) @updatedAt
+  
+  authorId         String?
+  author           User?                @relation("IssueAuthor", fields: [authorId], references: [id])
+  
+  votes            Vote[]
+  comments         Comment[]
+  timeline         Timeline[]
+  adminNotes       AdminNote[]
+  statusHistory    ReportStatusHistory[]
+}
+
+model ReportStatusHistory {
+  id          String   @id @default(cuid())
+  issueId     String
+  status      String
+  adminId     String
+  note        String?
+  createdAt   DateTime @default(now())
+  issue       Issue    @relation(fields: [issueId], references: [id])
+}
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  content   String
+  adminId   String
+  issueId   String
+  createdAt DateTime @default(now())
+  admin     User     @relation(fields: [adminId], references: [id])
+  issue     Issue    @relation(fields: [issueId], references: [id])
+}
+
+model AdminActivityLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String
+  targetType  String
+  targetId    String
+  metadata    String
+  createdAt   DateTime @default(now())
+  admin       User     @relation(fields: [adminId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  type      String
+  userId    String
+  issueId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  @@unique([userId, issueId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  issueId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  issue     Issue    @relation(fields: [issueId], references: [id])
+}
+
+model Timeline {
+  id        String   @id @default(cuid())
+  issueId   String
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id])
+}
