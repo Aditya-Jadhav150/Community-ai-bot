@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Map, PlusCircle, LayoutDashboard, User } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useDemoUser } from "@/hooks/useDemoUser";
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user } = useDemoUser();
 
   if (pathname === "/login") return null;
 
-  const isAdmin = session?.user && ((session.user as any).role === "ADMIN" || (session.user as any).role === "SUPERADMIN");
+  const isAdmin = user && (user.role === "ADMIN" || user.role === "SUPERADMIN");
   const activeColor = isAdmin ? "text-[#9B5DE5]" : "text-[#00FFE0]";
 
   return (

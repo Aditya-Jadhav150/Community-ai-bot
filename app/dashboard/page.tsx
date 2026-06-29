@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useDemoData } from "@/context/DemoDataContext";
 import { Card } from "@/components/ui/card";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -9,53 +9,34 @@ import {
 import { AlertTriangle, CheckCircle, Clock, Users } from "lucide-react";
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ reported: 0, resolved: 0, avgTime: "0", users: 0 });
-  const [issuesByType, setIssuesByType] = useState<any[]>([]);
-  const [issuesOverTime, setIssuesOverTime] = useState<any[]>([]);
+  const { reports, users } = useDemoData();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/issues");
-        const issues = await res.json();
-        
-        const resolved = issues.filter((i: any) => i.status === "RESOLVED").length;
-        setStats({
-          reported: issues.length,
-          resolved,
-          avgTime: resolved > 0 ? "3.2 days" : "N/A", // Mock avg time for now
-          users: 42, // Mock active users
-        });
+  const resolvedCount = reports.filter(r => r.status === "RESOLVED").length;
+  
+  const stats = {
+    reported: reports.length,
+    resolved: resolvedCount,
+    avgTime: resolvedCount > 0 ? "3.2 days" : "N/A",
+    users: users.length,
+  };
 
-        // Calculate types
-        const types: Record<string, number> = {};
-        issues.forEach((i: any) => {
-          types[i.type] = (types[i.type] || 0) + 1;
-        });
-        
-        const typeData = Object.entries(types).map(([name, value]) => ({ name, value }));
-        setIssuesByType(typeData);
-        
-        // Mock issues over time since we need dates grouped
-        setIssuesOverTime([
-          { name: "Mon", issues: 4 },
-          { name: "Tue", issues: 7 },
-          { name: "Wed", issues: 5 },
-          { name: "Thu", issues: 12 },
-          { name: "Fri", issues: 8 },
-          { name: "Sat", issues: 15 },
-          { name: "Sun", issues: 10 },
-        ]);
-        
-      } catch (error) {
-        console.error("Failed to fetch dashboard data", error);
-      }
-    }
-    fetchData();
-    // Use polling for "real-time"
-    const interval = setInterval(fetchData, 15000);
-    return () => clearInterval(interval);
-  }, []);
+  const types: Record<string, number> = {};
+  reports.forEach(r => {
+    types[r.category] = (types[r.category] || 0) + 1;
+  });
+  
+  const issuesByType = Object.entries(types).map(([name, value]) => ({ name, value }));
+  
+  // Mock issues over time since we need dates grouped
+  const issuesOverTime = [
+    { name: "Mon", issues: 4 },
+    { name: "Tue", issues: 7 },
+    { name: "Wed", issues: 5 },
+    { name: "Thu", issues: 12 },
+    { name: "Fri", issues: 8 },
+    { name: "Sat", issues: 15 },
+    { name: "Sun", issues: 10 },
+  ];
 
   const COLORS = ['#00AEFF', '#00FFE0', '#9B5DE5', '#FF9500', '#FF3B30'];
 

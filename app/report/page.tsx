@@ -11,9 +11,13 @@ import { UploadCloud, CheckCircle, MapPin, Zap, Camera } from "lucide-react";
 import { useLoadScript, GoogleMap, Marker } from "@react-google-maps/api";
 import { motion, AnimatePresence } from "framer-motion";
 import LiveCameraCapture, { CapturedImage } from "@/components/camera/LiveCameraCapture";
+import { useDemoData } from "@/context/DemoDataContext";
+import { useDemoUser } from "@/hooks/useDemoUser";
 
 export default function ReportWizard() {
   const router = useRouter();
+  const { submitReport } = useDemoData();
+  const { user } = useDemoUser();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -77,15 +81,7 @@ export default function ReportWizard() {
   const handleAnalyze = async () => {
     setLoading(true);
     try {
-      // First, get the secure url from our upload route
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64Image, folder: "community_hero" })
-      });
-      const uploadData = await uploadRes.json();
-      if (uploadData.error) throw new Error(uploadData.error);
-      const secureUrl = uploadData.url;
+      const secureUrl = file ? URL.createObjectURL(file) : "";
 
       const res = await fetch("/api/ai/analyze", {
         method: "POST",
@@ -115,28 +111,34 @@ export default function ReportWizard() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/issues", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: aiData?.title || "Community Issue",
-          description: description || aiData?.description || "",
-          type: aiData?.issueType || "OTHER",
-          severity: aiData?.severity || "MEDIUM",
-          latitude: location.lat,
-          longitude: location.lng,
-          address: address || "Community Location",
-          mediaUrls: aiData?.secureUrl ? [aiData.secureUrl] : [],
-          aiAnalysis: aiData,
-          confidenceScore: aiData?.confidenceScore || 0.9,
-          // New Camera fields
-          accuracy: capturedMetadata?.accuracy,
-          capturedAt: capturedMetadata?.capturedAt,
-          captureMethod: captureMethod
-        }),
+      if (!user) {
+        alert("Must be logged in");
+        return;
+      }
+      
+      const issue = submitReport({
+        title: aiData?.title || "Community Issue",
+        description: description || aiData?.description || "",
+        category: aiData?.issueType || "OTHER",
+        severity: aiData?.severity || "MEDIUM",
+        status: "OPEN",
+        priorityScore: (aiData?.confidenceScore || 0.9) * 100,
+        latitude: location.lat,
+        longitude: location.lng,
+        address: address || "Community Location",
+        imageUrl: aiData?.secureUrl || "",
+        submittedBy: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        },
+        captureMethod: captureMethod,
+        capturedAt: capturedMetadata?.capturedAt,
+        aiConfidence: aiData?.confidenceScore || 0.9,
+        aiSummary: aiData?.description || "",
       });
       
-      const issue = await res.json();
       if (issue.id) {
         router.push(`/issues/${issue.id}`);
       }
@@ -147,7 +149,7 @@ export default function ReportWizard() {
     }
   };
 
-  const slideVariants = {
+  const slideVariants: any = {
     initial: { x: "100%", opacity: 0 },
     enter: { x: 0, opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
     exit: { x: "-100%", opacity: 0, transition: { duration: 0.3, ease: "easeIn" } },

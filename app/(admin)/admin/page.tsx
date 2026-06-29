@@ -4,29 +4,37 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { AlertCircle, Clock, CheckCircle, TrendingUp, Users, FileText } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useDemoData } from "@/context/DemoDataContext";
 
 const PIE_COLORS = ['#9B5DE5', '#00AEFF', '#00FFE0', '#F15BB5', '#FEE440'];
 
 export default function AdminOverviewPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { reports, users } = useDemoData();
 
-  useEffect(() => {
-    fetch("/api/admin/overview")
-      .then(res => res.json())
-      .then(d => {
-        setData(d);
-        setLoading(false);
-      })
-      .catch(e => {
-        console.error(e);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading || !data) {
-    return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading overview data...</div>;
-  }
+  const data = {
+    totalReports: reports.length,
+    totalUsers: users.length,
+    avgResolutionDays: 3.2,
+    timeBreakdown: { last30d: reports.length },
+    statusBreakdown: {
+      open: reports.filter(r => r.status === "OPEN").length,
+      inProgress: reports.filter(r => r.status === "IN_PROGRESS").length,
+      resolved: reports.filter(r => r.status === "RESOLVED").length,
+    },
+    charts: {
+      lineData: [
+        { date: "Day 1", count: 2 }, { date: "Day 5", count: 4 }, { date: "Day 10", count: 3 }, 
+        { date: "Day 15", count: 7 }, { date: "Day 20", count: 5 }, { date: "Day 25", count: 8 }, 
+        { date: "Day 30", count: 12 }
+      ],
+      pieData: Object.entries(
+        reports.reduce((acc, r) => { acc[r.category] = (acc[r.category] || 0) + 1; return acc; }, {} as Record<string, number>)
+      ).map(([name, value]) => ({ name, value }))
+    },
+    topCategories: Object.entries(
+      reports.reduce((acc, r) => { acc[r.category] = (acc[r.category] || 0) + 1; return acc; }, {} as Record<string, number>)
+    ).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count).slice(0, 5)
+  };
 
   return (
     <div className="space-y-6">

@@ -1,10 +1,24 @@
+"use client";
+
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { ShieldCheck, LayoutDashboard, FileText, Users, Briefcase, Activity, ArrowLeft } from "lucide-react";
 import { AdminNavLink } from "@/components/layout/AdminNavLink";
+import { useDemoUser } from "@/hooks/useDemoUser";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAdmin();
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useDemoUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return; // Wait for auth to load
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+      router.replace("/dashboard");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] text-foreground flex flex-col md:flex-row">

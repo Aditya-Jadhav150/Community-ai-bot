@@ -4,19 +4,10 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { ShieldAlert, UserCog, Edit3, Trash2, CheckCircle, Clock } from "lucide-react";
 
+import { useDemoData } from "@/context/DemoDataContext";
+
 export default function AdminActivityLogPage() {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/admin/activity")
-      .then(res => res.json())
-      .then(d => setLogs(d))
-      .catch(e => console.error(e))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading activity log...</div>;
+  const { activityLogs: logs } = useDemoData();
 
   const getIconForAction = (action: string) => {
     if (action.includes("STATUS") || action.includes("RESOLVED")) return <CheckCircle className="w-5 h-5 text-[#30D158]" />;
@@ -27,13 +18,9 @@ export default function AdminActivityLogPage() {
     return <Clock className="w-5 h-5 text-muted-foreground" />;
   };
 
-  const formatMetadata = (metadata: string) => {
-    try {
-      const parsed = JSON.parse(metadata);
-      return Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(" | ");
-    } catch {
-      return metadata;
-    }
+  const formatMetadata = (metadata: any) => {
+    if (!metadata || typeof metadata !== 'object') return metadata || "";
+    return Object.entries(metadata).map(([k, v]) => `${k}: ${v}`).join(" | ");
   };
 
   return (
@@ -60,7 +47,7 @@ export default function AdminActivityLogPage() {
                     <span className="text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</span>
                   </div>
                   <div className="text-sm text-white/80 mb-2">
-                    <span className="font-semibold text-white">{log.admin.name}</span> performed action on {log.targetType} <span className="font-mono text-xs bg-black/50 px-1 py-0.5 rounded text-white/60">{log.targetId.slice(-6)}</span>
+                    <span className="font-semibold text-white">{log.adminName}</span> performed action on {log.targetType} <span className="font-mono text-xs bg-black/50 px-1 py-0.5 rounded text-white/60">{log.targetId.slice(-6)}</span>
                   </div>
                   {log.metadata && log.metadata !== "{}" && (
                     <div className="p-2 bg-black/30 rounded text-xs text-muted-foreground font-mono truncate">

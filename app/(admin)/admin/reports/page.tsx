@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,95 +13,45 @@ import {
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { ShieldAlert, Download, ArrowUpDown, ChevronDown, Trash, ShieldCheck } from "lucide-react";
-import { format } from "date-time-format-timezone";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Download, ArrowUpDown, ChevronDown, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useDemoData } from "@/context/DemoDataContext";
 
 export default function AdminReportsPage() {
-  const [data, setData] = useState<any[]>([]);
-  const [workers, setWorkers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { reports: data, users, assignReport, changeStatus, escalateReport } = useDemoData();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch("/api/admin/reports");
-      const json = await res.json();
-      setData(json);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const workers = users.filter((u) => u.role === "WORKER" || u.role === "ADMIN");
 
-  const fetchWorkers = async () => {
-    try {
-      const res = await fetch("/api/admin/users");
-      const json = await res.json();
-      setWorkers(json.filter((u: any) => u.role === "WORKER" || u.role === "ADMIN" || u.role === "SUPERADMIN"));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    fetchWorkers();
-  }, []);
-
-  const handleAssign = async (id: string, assignedToId: string) => {
-    try {
-      await fetch(`/api/admin/reports/${id}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedToId })
-      });
-      fetchData();
+  const handleAssign = (id: string, assignedToId: string) => {
+    const worker = users.find(u => u.id === assignedToId);
+    if (worker) {
+      assignReport(id, { type: "worker", name: worker.name, workerId: worker.id });
       toast.success("Worker assigned successfully!");
-    } catch {
+    } else {
       toast.error("Failed to assign worker");
     }
   };
 
-  const handleStatusChange = async (id: string, status: string) => {
-    try {
-      await fetch(`/api/admin/reports/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
-      });
-      fetchData();
-      toast.success("Status updated!");
-    } catch {
-      toast.error("Failed to update status");
-    }
+  const handleStatusChange = (id: string, status: string) => {
+    changeStatus(id, status);
+    toast.success("Status updated!");
   };
 
-  const handleEscalate = async (id: string) => {
-    try {
-      await fetch(`/api/admin/reports/${id}/escalate`, { method: "POST" });
-      fetchData();
-      toast.success("Report escalated to CRITICAL!");
-    } catch {
-      toast.error("Failed to escalate");
-    }
+  const handleEscalate = (id: string) => {
+    escalateReport(id, "Manually escalated by Admin");
+    toast.success("Report escalated to CRITICAL!");
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     const confirm = window.confirm(`Type the report ID to confirm deletion: ${id}`);
     if (confirm) {
-      try {
-        await fetch(`/api/admin/reports/${id}`, { method: "DELETE" });
-        fetchData();
-        toast.success("Report deleted successfully");
-      } catch {
-        toast.error("Failed to delete report");
-      }
+      changeStatus(id, "DELETED", "Deleted by admin");
+      toast.success("Report marked as deleted");
     }
   };
 
@@ -123,7 +73,7 @@ export default function AdminReportsPage() {
         cell: info => <span className="font-medium truncate max-w-[200px] block">{info.getValue<string>()}</span>
       },
       {
-        accessorKey: "type",
+        accessorKey: "category",
         header: "Category",
         meta: { className: "hidden md:table-cell" },
         cell: info => <span className="text-xs uppercase">{info.getValue<string>().replace(/_/g, " ")}</span>
@@ -134,7 +84,7 @@ export default function AdminReportsPage() {
         cell: info => {
           const val = info.getValue<string>();
           const colors: Record<string, string> = {
-            REPORTED: "bg-white/10 text-white",
+            OPEN: "bg-white/10 text-white",
             IN_PROGRESS: "bg-[#00AEFF]/20 text-[#00AEFF] border-[#00AEFF]/50",
             ESCALATED: "bg-red-500/20 text-red-500 border-red-500/50",
             RESOLVED: "bg-[#30D158]/20 text-[#30D158] border-[#30D158]/50",
@@ -152,7 +102,7 @@ export default function AdminReportsPage() {
         accessorKey: "severity",
         header: "Severity",
         cell: info => (
-          <span className={`text-xs font-bold ${info.row.original.isEscalated || info.getValue() === "CRITICAL" ? "text-red-500" : "text-white"}`}>
+          <span className={`text-xs font-bold ${info.getValue() === "CRITICAL" ? "text-red-500" : "text-white"}`}>
             {info.getValue<string>()}
           </span>
         )
@@ -194,29 +144,29 @@ export default function AdminReportsPage() {
                         <span className="font-bold text-red-500">{report.severity}</span>
                       </div>
                       <div className="p-3 bg-white/5 rounded-lg">
-                        <span className="text-xs text-muted-foreground block">Author</span>
-                        <span className="font-bold">{report.author?.name || "Anonymous"}</span>
+                        <span className="text-xs text-muted-foreground block">Reporter</span>
+                        <span className="font-bold">{report.submittedBy?.name || "Anonymous"}</span>
                       </div>
                       <div className="p-3 bg-white/5 rounded-lg flex flex-col justify-between">
                         <span className="text-xs text-muted-foreground block mb-1">Assigned To</span>
                         <div className="relative">
                           <select 
                             className="w-full bg-black/40 border border-white/20 rounded p-1.5 text-sm font-bold text-white outline-none focus:border-[#00AEFF] transition-colors appearance-none cursor-pointer pr-6"
-                            value={report.assignedToId || ""}
+                            value={report.assignedTo?.workerId || ""}
                             onChange={(e) => handleAssign(report.id, e.target.value)}
                           >
                             <option value="">Unassigned</option>
-                            {workers.map(w => <option key={w.id} value={w.id}>{w.displayName || w.name} ({w.role})</option>)}
+                            {workers.map(w => <option key={w.id} value={w.id}>{w.name} ({w.role})</option>)}
                           </select>
                           <ChevronDown className="w-4 h-4 absolute right-1.5 top-2 pointer-events-none text-white/50" />
                         </div>
                       </div>
                     </div>
 
-                    {report.aiAnalysis && (
+                    {report.aiSummary && (
                       <div className="p-4 bg-[#9B5DE5]/10 border border-[#9B5DE5]/20 rounded-xl">
                         <h4 className="font-bold text-[#9B5DE5] mb-2 text-sm">AI Analysis</h4>
-                        <p className="text-sm text-muted-foreground">{JSON.parse(report.aiAnalysis).summary || "No summary available."}</p>
+                        <p className="text-sm text-muted-foreground">{report.aiSummary}</p>
                       </div>
                     )}
 
@@ -226,9 +176,7 @@ export default function AdminReportsPage() {
                         <>
                           <Button size="sm" onClick={() => handleStatusChange(report.id, "IN_PROGRESS")} className="w-full bg-[#00AEFF]/20 text-[#00AEFF] hover:bg-[#00AEFF]/40 border border-[#00AEFF]/50 shadow-[0_0_15px_rgba(0,174,255,0.2)] transition-all">Mark In Progress</Button>
                           <Button size="sm" onClick={() => handleStatusChange(report.id, "RESOLVED")} className="w-full bg-[#30D158]/20 text-[#30D158] hover:bg-[#30D158]/40 border border-[#30D158]/50 shadow-[0_0_15px_rgba(48,209,88,0.2)] transition-all">Mark Resolved</Button>
-                          {!report.isEscalated && (
-                            <Button size="sm" onClick={() => handleEscalate(report.id)} className="w-full bg-red-500/20 text-red-500 hover:bg-red-500/40 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all">Escalate</Button>
-                          )}
+                          <Button size="sm" onClick={() => handleEscalate(report.id)} className="w-full bg-red-500/20 text-red-500 hover:bg-red-500/40 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all">Escalate</Button>
                         </>
                       )}
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(report.id)} className="w-full mt-4 shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all hover:bg-red-600">
@@ -243,7 +191,7 @@ export default function AdminReportsPage() {
         }
       }
     ],
-    []
+    [workers, isMobile, handleAssign, handleStatusChange, handleEscalate, handleDelete]
   );
 
   const table = useReactTable({
@@ -266,7 +214,7 @@ export default function AdminReportsPage() {
       const values = [
         row.original.id,
         `"${row.original.title.replace(/"/g, '""')}"`,
-        row.original.type,
+        row.original.category,
         row.original.severity,
         row.original.status,
         new Date(row.original.createdAt).toISOString(),
@@ -283,8 +231,6 @@ export default function AdminReportsPage() {
     a.click();
   };
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading reports...</div>;
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -298,19 +244,18 @@ export default function AdminReportsPage() {
         <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/20">
           <Input 
             placeholder="Search all columns..." 
-            value={globalFilter ?? ""} 
-            onChange={e => setGlobalFilter(e.target.value)}
-            className="max-w-sm bg-[#1A1A1A] border-white/10"
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="max-w-xs bg-black/50 border-white/20"
           />
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground bg-black/40 uppercase border-b border-white/10">
+            <thead className="bg-black/40 text-muted-foreground uppercase text-xs border-b border-white/10">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
-                    <th key={header.id} className={`px-6 py-3 font-medium ${(header.column.columnDef.meta as any)?.className || ""}`}>
+                    <th key={header.id} className={`p-4 font-semibold ${(header.column.columnDef.meta as any)?.className || ""}`}>
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
@@ -322,7 +267,7 @@ export default function AdminReportsPage() {
                 table.getRowModel().rows.map(row => (
                   <tr key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className={`px-6 py-4 ${(cell.column.columnDef.meta as any)?.className || ""}`}>
+                      <td key={cell.id} className={`p-4 ${(cell.column.columnDef.meta as any)?.className || ""}`}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -330,8 +275,8 @@ export default function AdminReportsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="px-6 py-8 text-center text-muted-foreground">
-                    No reports found.
+                  <td colSpan={columns.length} className="p-8 text-center text-muted-foreground">
+                    No results found.
                   </td>
                 </tr>
               )}

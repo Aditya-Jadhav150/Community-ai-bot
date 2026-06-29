@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, LogOut, Map, LayoutDashboard, PlusCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useDemoUser } from "@/hooks/useDemoUser";
+import { useDemoAuth } from "@/context/DemoAuthContext";
 
 export function TopNav() {
-  const { data: session } = useSession();
+  const { user } = useDemoUser();
+  const { logout } = useDemoAuth();
   const pathname = usePathname();
 
   // Hide nav on login
@@ -28,12 +30,12 @@ export function TopNav() {
           <Link href="/map" className="text-sm font-medium hover:text-[#00AEFF] transition-colors flex items-center gap-1">
             <Map className="w-4 h-4" /> Map
           </Link>
-          {((session?.user as any)?.role === "ADMIN" || (session?.user as any)?.role === "SUPERADMIN") && (
+          {(user?.role === "ADMIN" || user?.role === "SUPERADMIN") && (
             <Link href="/admin" className="text-sm font-bold text-[#9B5DE5] hover:text-[#9B5DE5]/80 transition-colors flex items-center gap-1">
               <ShieldCheck className="w-4 h-4" /> Admin Panel
             </Link>
           )}
-          {(!session?.user || ((session.user as any)?.role !== "ADMIN" && (session.user as any)?.role !== "SUPERADMIN")) && (
+          {(!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) && (
             <Link href="/report">
               <Button size="sm" className="bg-[#00AEFF] hover:bg-[#00AEFF]/80 text-white rounded-full shadow-[0_0_15px_rgba(0,174,255,0.3)]">
                 <PlusCircle className="w-4 h-4 mr-1" /> Report
@@ -43,28 +45,28 @@ export function TopNav() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {session ? (
+          {user ? (
             <div className="flex items-center gap-3">
               <div className="flex flex-col items-end hidden sm:flex">
-                <span className="text-sm font-semibold">{session.user?.name}</span>
+                <span className="text-sm font-semibold">{user.name}</span>
                 <span className="text-xs font-bold uppercase tracking-wider">
-                  {((session.user as any)?.role === "ADMIN" || (session.user as any)?.role === "SUPERADMIN") ? (
-                    <span className="text-[#9B5DE5]">{(session.user as any).role}</span>
+                  {(user.role === "ADMIN" || user.role === "SUPERADMIN") ? (
+                    <span className="text-[#9B5DE5]">{user.role}</span>
                   ) : (
-                    <span className="text-[#00FFE0]">{(session.user as any)?.level || "CITIZEN"}</span>
+                    <span className="text-[#00FFE0]">{user.level || "CITIZEN"}</span>
                   )}
                 </span>
               </div>
               <Link href="/settings" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                {session.user?.image ? (
-                  <img src={session.user.image} alt="Avatar" className="w-8 h-8 rounded-full border border-white/20" />
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full border border-white/20" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-                    <span className="text-xs font-bold">{(session.user?.name || "U")[0]}</span>
+                    <span className="text-xs font-bold">{(user.name || "U")[0]}</span>
                   </div>
                 )}
               </Link>
-              <Button variant="ghost" size="icon" onClick={() => signOut()}>
+              <Button variant="ghost" size="icon" onClick={() => logout()}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>

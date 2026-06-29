@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { useDemoData } from "@/context/DemoDataContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,19 +29,12 @@ const mapStyle = [
 
 export default function MapPage() {
   const router = useRouter();
-  const [issues, setIssues] = useState<any[]>([]);
+  const { reports: issues } = useDemoData();
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
-
-  useEffect(() => {
-    fetch("/api/issues")
-      .then((res) => res.json())
-      .then((data) => setIssues(data))
-      .catch((err) => console.error("Error fetching map issues:", err));
-  }, []);
 
   const getMarkerColor = (severity: string) => {
     switch(severity) {
@@ -122,39 +116,41 @@ export default function MapPage() {
       </div>
 
       {/* Map Area */}
-      <div className="flex-1 relative h-full">
-        {isLoaded ? (
-          <GoogleMap
-            mapContainerStyle={containerStyle}
-            center={issues.length > 0 ? { lat: issues[0].latitude, lng: issues[0].longitude } : defaultCenter}
-            zoom={13}
-            options={{
-              styles: mapStyle,
-              disableDefaultUI: true,
-              zoomControl: true,
-            }}
-          >
-            {issues.map((issue) => (
-              <Marker
-                key={issue.id}
-                position={{ lat: issue.latitude, lng: issue.longitude }}
-                onClick={() => router.push(`/issues/${issue.id}`)}
-                icon={{
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 12, // Ensure min 44px tap target size by increasing scale
-                  fillColor: getMarkerColor(issue.severity),
-                  fillOpacity: 0.9,
-                  strokeWeight: 3,
-                  strokeColor: "#ffffff",
-                }}
-              />
-            ))}
-          </GoogleMap>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            Loading Map...
-          </div>
-        )}
+      <div className="flex-1 relative min-h-[60vh] w-full">
+        <div className="absolute inset-0">
+          {isLoaded ? (
+            <GoogleMap
+              mapContainerStyle={containerStyle}
+              center={issues.length > 0 ? { lat: issues[0].latitude, lng: issues[0].longitude } : defaultCenter}
+              zoom={13}
+              options={{
+                styles: mapStyle,
+                disableDefaultUI: true,
+                zoomControl: true,
+              }}
+            >
+              {issues.map((issue) => (
+                <Marker
+                  key={issue.id}
+                  position={{ lat: issue.latitude, lng: issue.longitude }}
+                  onClick={() => router.push(`/issues/${issue.id}`)}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 12,
+                    fillColor: getMarkerColor(issue.severity),
+                    fillOpacity: 0.9,
+                    strokeWeight: 3,
+                    strokeColor: "#ffffff",
+                  }}
+                />
+              ))}
+            </GoogleMap>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              Loading Map...
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,14 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { DemoAuthProvider } from "@/context/DemoAuthContext";
+import { DemoDataProvider } from "@/context/DemoDataContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return (
+    <DemoAuthProvider>
+      <DemoDataProvider>
+        {children}
+      </DemoDataProvider>
+    </DemoAuthProvider>
+  );
 }
