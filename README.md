@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Community Hero AI 🦸‍♂️🦸‍♀️
 
-## Getting Started
+Community Hero AI is an intelligent, Agentic AI-powered civic engagement platform designed to modernize local infrastructure management. By allowing citizens to simply snap a photo of a hyperlocal issue (like a pothole, water leak, or broken streetlight), the platform leverages the multimodal capabilities of **Google Gemini AI** to autonomously classify the problem, estimate its severity, extract contextual descriptions, and route it to the appropriate municipal department.
 
-First, run the development server:
+## 🌟 Key Features
+- **AI-Powered Image Analysis:** Powered by Gemini 2.5 Flash, the app automatically extracts issue type and severity from photos.
+- **Autonomous Routing:** Intelligently determines the correct municipal department responsible for the fix.
+- **Live Interactive Map:** A dynamic, hyperlocal Google Map displaying issue clustering and real-time community heatmaps.
+- **Community Validation:** Citizens can upvote and verify existing reports to crowd-source validation and eliminate duplicate tickets.
+- **Predictive AI Insights:** Identifies recurring issue hotspots to enable proactive, preventative maintenance.
+- **Citizen Gamification:** Users earn XP and community ranks for reporting and validating issues.
+- **Dedicated Dashboards:** Real-time tracking for citizens, and prioritized incident lifecycle management for municipal admins.
 
+## 🛠️ Technology Stack
+- **Frontend:** Next.js (App Router), React, Tailwind CSS, shadcn/ui
+- **AI Integration:** Google Gemini 2.5 Flash API
+- **Mapping:** Google Maps Platform
+- **Deployment & Infrastructure:** Docker, Google Cloud Run, Google Artifact Registry
+
+## 🚀 Getting Started Locally
+
+First, clone the repository and install the dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Aditya-Jadhav150/Community-ai-bot.git
+cd Community-ai-bot
+npm install
 ```
 
+Next, create a `.env` file in the root directory and add your API keys:
+```env
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your_google_maps_api_key_here"
+GEMINI_API_KEY="your_gemini_api_key_here"
+```
+
+Finally, run the development server:
+```bash
+npm run dev
+```
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ☁️ Deployment (Google Cloud Run)
+This repository is optimized for deployment to **Google Cloud Run** using Next.js Standalone mode.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To deploy to your GCP project, run the provided deployment script:
+```bash
+# Windows PowerShell
+.\deploy.ps1
+```
+*Note: Make sure you have the Google Cloud SDK (`gcloud`) installed and configured before deploying.*
